@@ -399,4 +399,4 @@ namespace MyCodes
 }
 
 #pragma warning(default:6011)
-#pragma warning(disable:6101)
+#pragma warning(default:6101)
