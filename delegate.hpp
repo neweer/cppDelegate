@@ -1,37 +1,35 @@
 /*
-    c++Î¯ÍĞ¿â
-    ÓÃ·¨Ê¾Àı:
-        Delegate<void,const int&> del;          //ÉùÃ÷Ò»¸öÎ¯ÍĞ
+    c++å§”æ‰˜åº“
+    ç”¨æ³•ç¤ºä¾‹:
+        Delegate<void,const int&> del;          //å£°æ˜ä¸€ä¸ªå§”æ‰˜
         std::vector<int> v;                     
-        del.Add(&v, &decltype(v)::push_back);   //Ìí¼Ó±äÁ¿ v µÄ push_back ·½·¨
-        del.Invoke(1);                          //µ÷ÓÃÎ¯ÍĞ£¬´«Èë²ÎÊı 1
-                                                // v ÖĞ³É¹¦Ìí¼ÓÕûÊı 1
+        del += {v, &decltype(v)::push_back};    //æ·»åŠ å˜é‡ v çš„ push_back æ–¹æ³•
+        del(1);                                 //è°ƒç”¨å§”æ‰˜ï¼Œä¼ å…¥å‚æ•° 1
+                                                // v ä¸­æˆåŠŸæ·»åŠ æ•´æ•° 1
 
-    ÆäËû:
-        1¡¢Îª·ÀÖ¹µ÷ÓÃ¿ÕÎ¯ÍĞ£¬¿ÉÒÔÊ¹ÓÃ TryInvoke ·½·¨¶ø²»ÊÇ Invoke ·½·¨¡£
-           TryInvoke ·½·¨·â×°ÁË¶ÔÎ¯ÍĞÊÇ·ñÎª¿ÕµÄÅĞ¶Ï£¬Í¨¹ı×ÔÉí·µ»ØÖµÈ·¶¨ÊÇ·ñµ÷
-           ÓÃ³É¹¦£¨¼´ÊÇ·ñ²»Îª¿Õ£©¡£ÈôĞèÒªÎ¯ÍĞµÄ·µ»ØÖµ£¬ÔòÓ¦¸ÃÊ¹ÓÃ TryInvoke 
-           µÄÖØÔØ°æ±¾£¬ÔÚµÚÒ»¸ö²ÎÊıÇ°Ãæ¶îÍâ´«ÈëÒª½ÓÊÜ·µ»ØÖµµÄ±äÁ¿¡£
-        2¡¢Èô²»ĞèÒª¶à²¥Î¯ÍĞ£¬Ôò¿ÉÒÔÖ±½ÓÊ¹ÓÃ Delegate_Single Àà£¬¸ÃÀàĞÍÖ»Ö§³Ö
-           ´æ´¢Ò»¸öÎ¯ÍĞ¡£
-        3¡¢Empty Àà½ö×÷ÎªÇ¿ÖÆÀàĞÍ×ª»»Ê±µÄÖĞ¼äÀàĞÍ£¬ÎŞÊµ¼ÊÒâÒå£¬Çë²»ÒªÊ¹ÓÃ¡£
-        4¡¢ÈôÒâÍâµ÷ÓÃÁË¿ÕÎ¯ÍĞ£¬Ôò»áÅ×³ö std::exception ÀàĞÍµÄÒì³£¡£
+    å…¶ä»–:
+        1ã€ä¸ºé˜²æ­¢è°ƒç”¨ç©ºå§”æ‰˜ï¼Œå¯ä»¥ä½¿ç”¨ TryInvoke æ–¹æ³•ã€‚
+           TryInvoke æ–¹æ³•å°è£…äº†å¯¹å§”æ‰˜æ˜¯å¦ä¸ºç©ºçš„åˆ¤æ–­ï¼Œé€šè¿‡è‡ªèº«è¿”å›å€¼ç¡®å®šæ˜¯å¦è°ƒ
+           ç”¨æˆåŠŸï¼ˆå³æ˜¯å¦ä¸ä¸ºç©ºï¼‰ã€‚è‹¥éœ€è¦å§”æ‰˜çš„è¿”å›å€¼ï¼Œåˆ™åº”è¯¥ä½¿ç”¨ TryInvoke 
+           çš„é‡è½½ç‰ˆæœ¬ï¼Œåœ¨ç¬¬ä¸€ä¸ªå‚æ•°å‰é¢é¢å¤–ä¼ å…¥è¦æ¥å—è¿”å›å€¼çš„å˜é‡ã€‚
+        2ã€è‹¥ä¸éœ€è¦å¤šæ’­å§”æ‰˜ï¼Œåˆ™å¯ä»¥ç›´æ¥ä½¿ç”¨ Delegate_Single ç±»ï¼Œè¯¥ç±»å‹åªæ”¯æŒ
+           å­˜å‚¨ä¸€ä¸ªå§”æ‰˜ã€‚
+        3ã€Empty ç±»ä»…ä½œä¸ºå¼ºåˆ¶ç±»å‹è½¬æ¢æ—¶çš„ä¸­é—´ç±»å‹ï¼Œæ— å®é™…æ„ä¹‰ï¼Œè¯·ä¸è¦ä½¿ç”¨ã€‚
+        4ã€è‹¥æ„å¤–è°ƒç”¨äº†ç©ºå§”æ‰˜ï¼Œåˆ™ä¼šæŠ›å‡º std::exception ç±»å‹çš„å¼‚å¸¸ã€‚
 */
 #pragma once
 #include<vector>
 #include<exception>
-#pragma warning(disable:6011,disable:6101)	//ÈÃ±àÒëÆ÷²»Òª·¢³ö¿ÕÖ¸Õë¾¯¸æºÍÎ´³õÊ¼»¯_Out_²ÎÊı¾¯¸æ
+#pragma warning(disable:6011)	
+#pragma warning(disable:6101)   //è®©ç¼–è¯‘å™¨ä¸è¦å‘å‡ºç©ºæŒ‡é’ˆè­¦å‘Šå’Œæœªåˆå§‹åŒ–_Out_å‚æ•°è­¦å‘Š
 
 namespace MyCodes
 {
-    const std::exception nullexc("error:ÊÔÍ¼µ÷ÓÃ¿ÕÎ¯ÍĞ");
-    using CallType = int;					//µ¥¸öÎ¯ÍĞµÄµ÷ÓÃ·½Ê½
-    constexpr CallType THIS_CALL = 1;		//Àà³ÉÔ±º¯Êıµ÷ÓÃ·½Ê½
-    constexpr CallType STATIC_CALL = 2;		//¾²Ì¬º¯Êıµ÷ÓÃ·½Ê½
+    const std::exception nullexc("error:è¯•å›¾è°ƒç”¨ç©ºå§”æ‰˜");
 
     template<class DelType>
     inline bool subDelegate(const DelType& del,std::vector<DelType>& allDels)
-    {//Ê¹ÓÃ·´Ïòµü´úÆ÷,°Ñ×îºóÃæµÄÒ»¸öÂú×ãÌõ¼şµÄÎ¯ÍĞÒÆ³ı
+    {//ä½¿ç”¨åå‘è¿­ä»£å™¨,æŠŠæœ€åé¢çš„ä¸€ä¸ªæ»¡è¶³æ¡ä»¶çš„å§”æ‰˜ç§»é™¤
         auto findit = allDels.rend();
         for (auto it = allDels.rbegin(); it != allDels.rend(); it++)
         {
@@ -69,166 +67,187 @@ namespace MyCodes
 
 namespace MyCodes
 {
-    template<class Tout, class... Tin>
-    class Empty	//¿ÕÀàĞÍ
+    class Empty	//ç©ºç±»å‹
     {
-    public:
-        Tout InvokeFun(Tin...) {}
+        
     };
 
     template<class Tout, class... Tin>
-    class Delegate_Single	//µ¥Î¯ÍĞ
+    class Delegate_Single	//å•å§”æ‰˜
     {
-        using Empty = Empty<Tout, Tin...>;
     public:
-
+        Delegate_Single() = default;
+        Delegate_Single(const Delegate_Single&) = default;
         template<class DelPtr>
-        //°ó¶¨Àà¶ÔÏóºÍÀà³ÉÔ±º¯Êı
-        void Bind(DelPtr const* __this, Tout(DelPtr::* __fun)(const Tin...))
+        Delegate_Single(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...))
         {
-            _this = reinterpret_cast<decltype(_this)>(const_cast<DelPtr*>(__this));
-            _fun = reinterpret_cast<decltype(_fun)> (__fun);
-            calltype = THIS_CALL;
+            this->Bind(__this, __fun);
+        }
+        template<class DelPtr>
+        Delegate_Single(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...)const)
+        {
+            this->Bind(__this, __fun);
+        }
+        Delegate_Single(Tout(*__fun)(const Tin...))
+        {
+            this->Bind(__fun);
         }
 
+        //ç»‘å®šç±»å¯¹è±¡å’Œç±»æˆå‘˜å‡½æ•°
         template<class DelPtr>
-        void Bind(DelPtr const* __this, Tout(DelPtr::* __fun)(const Tin...)const)
+        void Bind(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...))
         {
-            _this = reinterpret_cast<decltype(_this)>(const_cast<DelPtr*>(__this));
-            _fun = reinterpret_cast<decltype(_fun)> (__fun);
-            calltype = THIS_CALL;
+            _this = reinterpret_cast<decltype(_this)>(const_cast<DelPtr*>(&__this));
+            _fun.this_fun = reinterpret_cast<decltype(_fun.this_fun)> (__fun);
         }
-
-        //°ó¶¨¾²Ì¬º¯Êı
+        template<class DelPtr>
+        void Bind(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...)const)
+        {
+            _this = reinterpret_cast<decltype(_this)>(const_cast<DelPtr*>(&__this));
+            _fun.this_fun = reinterpret_cast<decltype(_fun.this_fun)> (__fun);
+        }
+        //ç»‘å®šé™æ€å‡½æ•°
         void Bind(Tout(*__fun)(const Tin...))
         {
-            static_fun = __fun;
-            calltype = STATIC_CALL;
+            _this = nullptr;
+            _fun.static_fun = __fun;
         }
 
         bool IsNull()const
         {
-            if ((_this == nullptr || _fun == nullptr) &&
-                static_fun == nullptr)
-                return true;
-            else
-                return false;
+            return _fun.isNull();
         }
 
-        //´¥·¢µ÷ÓÃ
-        Tout Invoke(const Tin&... tin)const noexcept(false)
+        //è§¦å‘è°ƒç”¨
+        Tout Invoke(const Tin&... tin)const noexcept(is_void_v<Tout>)
         {
             if (IsNull())
-                throw nullexc;
+            {
+                if constexpr (is_void_v<Tout>)
+                    return;
+                else
+                    throw nullexc;
+            }
 
-            if (calltype == THIS_CALL)
-                return (_this->*_fun)(tin...);
+
+            if (_this)
+                return (_this->*(_fun.this_fun))(tin...);
             else
-                return static_fun(tin...);
+                return _fun.static_fun(tin...);
+        }
+        Tout operator()(const Tin&... tin)const noexcept(is_void_v<Tout>)
+        {
+            return Invoke(tin...);
         }
 
-        //½â³ı°ó¶¨
-        void Delete()
+        //è§£é™¤ç»‘å®š
+        void UnBind()
         {
             _this = nullptr;
-            _fun = nullptr;
-            calltype = 0;
-            static_fun = nullptr;
+            _fun.value = nullptr;
         }
 
         bool operator==(const Delegate_Single& right)const
         {
-            if (this->calltype != right.calltype)
-                return false;
-
-            if (this->calltype == THIS_CALL)
-                return this->_this == right._this &&
-                this->_fun == right._fun;
-            else
-                return this->static_fun == right.static_fun;
+            return ((this->_fun.value == right._fun.value) &&
+                this->_this == right._this);
         }
-    private:
+        const Delegate_Single& operator=(const Delegate_Single& right)
+        {
+            this->_this = right._this;
+            this->_fun = right._fun;
+            return *this;
+        }
 
-        CallType calltype = 0;
-        Empty* _this                    = nullptr;
-        Tout(Empty::* _fun)(const Tin...) = nullptr;
-        Tout(*static_fun)(const Tin...)   = nullptr;
+    protected:
+        union _CallFun
+        {
+            void* value = nullptr;
+            Tout(Empty::* this_fun)(const Tin...);
+            Tout(*static_fun)(const Tin...);
+            __forceinline bool isNull()const
+            {
+                return this->value == nullptr;
+            }
+        };
+
+        Empty* _this = nullptr;
+        _CallFun _fun;
     };
 
     template<class Tout, class... Tin>
-    class Delegate
+    class Delegate_base //å§”æ‰˜åŸºç±»
     {
     public:
-
+        //æ·»åŠ å§”æ‰˜
         template<class DelPtr>
-        //Ìí¼ÓÎ¯ÍĞ
-        void Add(DelPtr const* __this, Tout(DelPtr::* __fun)(const Tin...))
+        void Add(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...))
         {
             Delegate_Single<Tout, Tin...> temp;
             temp.Bind(__this, __fun);
             m_allDels.push_back(temp);
         }
-
         template<class DelPtr>
-        void Add(DelPtr const* __this, Tout(DelPtr::* __fun)(const Tin...)const)
+        void Add(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...)const)
         {
             Delegate_Single<Tout, Tin...> temp;
             temp.Bind(__this, __fun);
             m_allDels.push_back(temp);
         }
-
-        //Ìí¼Ó¾²Ì¬Î¯ÍĞ
+        //æ·»åŠ é™æ€å§”æ‰˜
         void Add(Tout(*__fun)(const Tin...))
         {
             Delegate_Single<Tout, Tin...> temp;
             temp.Bind(__fun);
             m_allDels.push_back(temp);
         }
+        void Add(const Delegate_Single<Tout, Tin...>& del)
+        {
+            if(!del.IsNull())
+                this->m_allDels.push_back(del);
+        }
+        Delegate_base& operator+=(const Delegate_Single<Tout, Tin...>& del)
+        {
+            if (!del.IsNull())
+                this->m_allDels.push_back(del);
+            return *this;
+        }
 
         void Clear()
         {
             m_allDels.clear();
         }
-
         bool IsNull()const
         {
             return m_allDels.size() == 0;
         }
-
         _declspec(property(get = getsize)) const size_t size;
         const size_t getsize()const
         {
             return m_allDels.size();
         }
 
-        //´¥·¢µ÷ÓÃ
-        Tout Invoke(const Tin&... tin)const noexcept(false)
+        //è§¦å‘è°ƒç”¨
+        Tout Invoke(const Tin&... tin)const noexcept(is_void_v<Tout>)
         {
             for (size_t i = 0; i < m_allDels.size(); i++)
             {
-                if (i == m_allDels.size() - 1)
-                {
-                    return m_allDels[i].Invoke(tin...);
-                }
+                if constexpr(!is_void_v<Tout>)
+                    if (i == m_allDels.size() - 1)
+                    {
+                        return m_allDels[i].Invoke(tin...);
+                    }
+
                 m_allDels[i].Invoke(tin...);
             }
 
-            throw nullexc;
+            if constexpr(!is_void_v<Tout>)
+                throw nullexc;
         }
-
-        bool TryInvoke(_Out_ Tout& out,const Tin&... tin)const
+        Tout operator()(const Tin&... tin)const noexcept(is_void_v<Tout>)
         {
-            if (IsNull())
-            {
-                return false;
-            }
-            else
-            {
-                out=Invoke(tin...);
-                return true;
-            }
+            return Invoke(tin...);
         }
-
         bool TryInvoke(const Tin&... tin)const
         {
             if (IsNull())
@@ -242,185 +261,142 @@ namespace MyCodes
             }
         }
 
+        //åˆ é™¤å§”æ‰˜
         template<class DelPtr>
-        //É¾³ıÎ¯ÍĞ
-        bool Sub(DelPtr const* __this, Tout(DelPtr::* __fun)(const Tin...))
+        bool Sub(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...))
         {
             Delegate_Single<Tout, Tin...> temp;
             temp.Bind(__this, __fun);
             return subDelegate(temp, m_allDels);
         }
-
         template<class DelPtr>
-        bool Sub(DelPtr const* __this, Tout(DelPtr::* __fun)(const Tin...)const)
+        bool Sub(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...)const)
         {
             Delegate_Single<Tout, Tin...> temp;
             temp.Bind(__this, __fun);
             return subDelegate(temp, m_allDels);
         }
-
-        //É¾³ı¾²Ì¬Î¯ÍĞ
+        //åˆ é™¤é™æ€å§”æ‰˜
         bool Sub(Tout(*__fun)(const Tin...))
         {
             Delegate_Single<Tout, Tin...> temp;
             temp.Bind(__fun);
             return subDelegate(temp, m_allDels);
         }
+        bool Sub(const Delegate_Single<Tout, Tin...>& del)
+        {
+            return subDelegate(del, m_allDels);
+        }
+        bool operator-=(const Delegate_Single<Tout, Tin...>& del)
+        {
+            return subDelegate(del, m_allDels);
+        }
 
         template<class DelPtr>
-        bool Have(DelPtr const* __this, Tout(DelPtr::* __fun)(const Tin...))const
+        bool Have(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...))const
         {
             Delegate_Single<Tout, Tin...> temp;
             temp.Bind(__this, __fun);
             return haveDelegate(temp, m_allDels);
         }
-
         template<class DelPtr>
-        bool Have(DelPtr const* __this, Tout(DelPtr::* __fun)(const Tin...)const)const
+        bool Have(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...)const)const
         {
             Delegate_Single<Tout, Tin...> temp;
             temp.Bind(__this, __fun);
             return haveDelegate(temp, m_allDels);
         }
-
         bool Have(Tout(*__fun)(const Tin...))const
         {
             Delegate_Single<Tout, Tin...> temp;
             temp.Bind(__fun);
             return haveDelegate(temp, m_allDels);
         }
+        bool Have(const Delegate_Single<Tout, Tin...>& del)const
+        {
+            return haveDelegate(del, m_allDels);
+        }
 
-    private:
-
+    protected:
+        Delegate_base() = default;
+        Delegate_base(const Delegate_base&) = default;
+        Delegate_base(Delegate_base&&) = default;
         std::vector<Delegate_Single<Tout, Tin...>> m_allDels;
     };
 
-    template< class... Tin>
-    class Delegate<void,Tin...>	//µ¥²ÎÊıÎ¯ÍĞ
+    template<class Tout,class... Tin>
+    class Delegate :public Delegate_base<Tout, Tin...>
     {
     public:
-        using Tout = void;
-        template<class DelPtr>
-        //Ìí¼ÓÎ¯ÍĞ
-        void Add(DelPtr const* __this, Tout(DelPtr::* __fun)(const Tin...))
+        bool TryInvoke(_Out_ Tout& out,_In_ const Tin&... tin)const
         {
-            Delegate_Single<Tout, Tin...> temp;
-            temp.Bind(__this, __fun);
-            m_allDels.push_back(temp);
-        }
-
-        template<class DelPtr>
-        void Add(DelPtr const* __this, Tout(DelPtr::* __fun)(const Tin...)const)
-        {
-            Delegate_Single<Tout, Tin...> temp;
-            temp.Bind(__this, __fun);
-            m_allDels.push_back(temp);
-        }
-
-        //Ìí¼Ó¾²Ì¬Î¯ÍĞ
-        void Add(Tout(*__fun)(const Tin...))
-        {
-            Delegate_Single<Tout, Tin...> temp;
-            temp.Bind(__fun);
-            m_allDels.push_back(temp);
-        }
-
-        void Clear()
-        {
-            m_allDels.clear();
-        }
-
-        bool IsNull()const
-        {
-            return m_allDels.size() == 0;
-        }
-
-        _declspec(property(get = getsize)) const size_t size;
-        const size_t getsize()const
-        {
-            return m_allDels.size();
-        }
-
-        //´¥·¢µ÷ÓÃ
-        Tout Invoke(const Tin&... tin)const noexcept(false)
-        {
-            for (size_t i = 0; i < m_allDels.size(); i++)
-            {
-                if (i == m_allDels.size() - 1)
-                {
-                    return m_allDels[i].Invoke(tin...);
-                }
-                m_allDels[i].Invoke(tin...);
-            }
-
-            throw nullexc;
-        }
-
-        bool TryInvoke(const Tin&... tin)const
-        {
-            if (IsNull())
+            if (this->IsNull())
             {
                 return false;
             }
             else
             {
-                Invoke(tin...);
+                out = this->Invoke(tin...);
                 return true;
             }
         }
-
-        template<class DelPtr>
-        //É¾³ıÎ¯ÍĞ
-        bool Sub(DelPtr const* __this, Tout(DelPtr::* __fun)(const Tin...))
+        bool TryInvoke(const Tin&... tin)const
         {
-            Delegate_Single<Tout, Tin...> temp;
-            temp.Bind(__this, __fun);
-            return subDelegate(temp, m_allDels);
+            return Delegate_base<Tout, Tin...>::TryInvoke(tin...);
         }
+    };
 
-        template<class DelPtr>
-        bool Sub(DelPtr const* __this, Tout(DelPtr::* __fun)(const Tin...)const)
+    //è¿”å›å€¼ä¸ºå¸¸é‡å¼•ç”¨ç±»å‹æ—¶çš„åç‰¹åŒ–
+    template<class Tout,class...Tin>
+    class Delegate<const Tout&, Tin...> :public Delegate_base<const Tout&, Tin...>
+    {
+    public:
+        bool TryInvoke(_Out_ Tout& out, _In_ const Tin&... tin)const
         {
-            Delegate_Single<Tout, Tin...> temp;
-            temp.Bind(__this, __fun);
-            return subDelegate(temp, m_allDels);
+            if (this->IsNull())
+            {
+                return false;
+            }
+            else
+            {
+                out = this->Invoke(tin...);
+                return true;
+            }
         }
-
-        //É¾³ı¾²Ì¬Î¯ÍĞ
-        bool Sub(Tout(*__fun)(const Tin...))
+        bool TryInvoke(const Tin&... tin)const
         {
-            Delegate_Single<Tout, Tin...> temp;
-            temp.Bind(__fun);
-            return subDelegate(temp, m_allDels);
+            return Delegate_base<Tout, Tin...>::TryInvoke(tin...);
         }
+    };
 
-        template<class DelPtr>
-        bool Have(DelPtr const* __this, Tout(DelPtr::* __fun)(const Tin...))const
+    template<class Tout, class...Tin>
+    class Delegate<const Tout, Tin...> :public Delegate_base<const Tout, Tin...>
+    {
+    public:
+        bool TryInvoke(_Out_ Tout& out, _In_ const Tin&... tin)const
         {
-            Delegate_Single<Tout, Tin...> temp;
-            temp.Bind(__this, __fun);
-            return haveDelegate(temp, m_allDels);
+            if (this->IsNull())
+            {
+                return false;
+            }
+            else
+            {
+                out = this->Invoke(tin...);
+                return true;
+            }
         }
-
-        template<class DelPtr>
-        bool Have(DelPtr const* __this, Tout(DelPtr::* __fun)(const Tin...)const)const
+        bool TryInvoke(const Tin&... tin)const
         {
-            Delegate_Single<Tout, Tin...> temp;
-            temp.Bind(__this, __fun);
-            return haveDelegate(temp, m_allDels);
+            return Delegate_base<Tout, Tin...>::TryInvoke(tin...);
         }
+    };
 
-        bool Have(Tout(*__fun)(const Tin...))const
-        {
-            Delegate_Single<Tout, Tin...> temp;
-            temp.Bind(__fun);
-            return haveDelegate(temp, m_allDels);
-        }
+    template<class...Tin>
+    class Delegate<void, Tin...> :public Delegate_base<void, Tin...>
+    {
 
-    private:
-
-        std::vector<Delegate_Single<Tout, Tin...>> m_allDels;
     };
 }
 
-#pragma warning(default:6011,default:6101)
+#pragma warning(default:6011)
+#pragma warning(disable:6101)
