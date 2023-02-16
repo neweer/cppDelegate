@@ -14,8 +14,23 @@
            的重载版本，在第一个参数前面额外传入要接受返回值的变量。
         2、若不需要多播委托，则可以直接使用 Delegate_Single 类，该类型只支持
            存储一个委托。
-        3、Empty 类仅作为强制类型转换时的中间类型，无实际意义，请不要使用。
+        3、Empty 类和 Empty_vbptr 类仅作为强制类型转换时的中间类型，无实际意义。
         4、若意外调用了空委托，则会抛出 std::exception 类型的异常。
+        5、如果要绑定的函数有重载版本，那么用类似 del += {v, &decltype(v)::push_back};
+           的语法时，编译器无法推导出是哪个重载，此时应该用 Add 方法，即
+           del.Add(v,&decltype(v)::push_back);  Sub 方法同理。
+        6、Delegate_view 类是对委托进行的包装，内部存储一个委托的指针，对外提供
+           的方法中不包含调用委托的方法，只能注册或删除委托。在类中，如果不希望
+           其他对象调用自身的委托，则可以把委托作为私有成员或保护成员，然后对外提
+           供一个指向该委托的委托视图。
+                用法示例:
+                class CLS
+                {
+                public:
+                    Delegate_view<void> del_view = del;
+                private:
+                    Delegate<void> del;
+                };
 */
 #pragma once
 #include<vector>
@@ -25,10 +40,10 @@
 
 namespace MyCodes
 {
-    const std::exception nullexc("error:试图调用空委托");
+    const std::exception bad_invoke("试图调用空委托获得返回值");
 
     template<class DelType>
-    inline bool subDelegate(const DelType& del,std::vector<DelType>& allDels)
+    inline bool subDelegate(const DelType& del,std::vector<DelType>& allDels)noexcept
     {//使用反向迭代器,把最后面的一个满足条件的委托移除
         auto findit = allDels.rend();
         for (auto it = allDels.rbegin(); it != allDels.rend(); it++)
@@ -51,7 +66,7 @@ namespace MyCodes
     }
 
     template<class DelType>
-    inline bool haveDelegate(const DelType& del, const std::vector<DelType>& allDels)
+    inline bool haveDelegate(const DelType& del, const std::vector<DelType>& allDels)noexcept
     {
         for (const auto& _del : allDels)
         {
@@ -70,6 +85,12 @@ namespace MyCodes
     class Empty	//空类型
     {
         
+    };
+
+    //带有 vbptr 的空类型
+    class Empty_vbptr :virtual Empty
+    {
+
     };
 
     template<class Tout, class... Tin>
@@ -95,45 +116,87 @@ namespace MyCodes
 
         //绑定类对象和类成员函数
         template<class DelPtr>
-        void Bind(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...))
+            requires (sizeof(Tout(DelPtr::*)(const Tin...)) == sizeof(Tout(Empty::*)(const Tin...))) //要求不是带有vbptr的类型
+        void Bind(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...))noexcept
         {
-            _this = reinterpret_cast<decltype(_this)>(const_cast<DelPtr*>(&__this));
+            _call_type = CallType::this_call;
+            _this._ptr = reinterpret_cast<decltype(_this._ptr)>(const_cast<DelPtr*>(&__this));
             _fun.this_fun = reinterpret_cast<decltype(_fun.this_fun)> (__fun);
         }
         template<class DelPtr>
-        void Bind(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...)const)
+            requires (sizeof(Tout(DelPtr::*)(const Tin...)const) == sizeof(Tout(Empty:: *)(const Tin...)))
+        void Bind(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...)const)noexcept
         {
-            _this = reinterpret_cast<decltype(_this)>(const_cast<DelPtr*>(&__this));
+            _call_type = CallType::this_call;
+            _this._ptr = reinterpret_cast<decltype(_this._ptr)>(const_cast<DelPtr*>(&__this));
             _fun.this_fun = reinterpret_cast<decltype(_fun.this_fun)> (__fun);
         }
-        //绑定静态函数
-        void Bind(Tout(*__fun)(const Tin...))
+        template<class DelPtr>
+            requires (sizeof(Tout(DelPtr::*)(const Tin...)) == sizeof(Tout(Empty_vbptr::*)(const Tin...)))
+        void Bind(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...))noexcept
         {
-            _this = nullptr;
+            _call_type = CallType::vbptr_this_call;
+            _this._ptr_vbptr = reinterpret_cast<decltype(_this._ptr_vbptr)>(const_cast<DelPtr*>(&__this));
+            _fun._this_fun_vbptr = reinterpret_cast<decltype(_fun._this_fun_vbptr)> (__fun);
+        }
+        template<class DelPtr>
+            requires (sizeof(Tout(DelPtr::*)(const Tin...)const) == sizeof(Tout(Empty_vbptr::*)(const Tin...)))
+        void Bind(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...)const)noexcept
+        {
+            _call_type = CallType::vbptr_this_call;
+            _this._ptr_vbptr = reinterpret_cast<decltype(_this._ptr_vbptr)>(const_cast<DelPtr*>(&__this));
+            _fun._this_fun_vbptr = reinterpret_cast<decltype(_fun._this_fun_vbptr)> (__fun);
+        }
+        //绑定静态函数
+        void Bind(Tout(*__fun)(const Tin...))noexcept
+        {
+            _call_type = CallType::static_call;
+            _this.value = nullptr;
             _fun.static_fun = __fun;
         }
 
-        bool IsNull()const
+        bool IsNull()const noexcept
         {
-            return _fun.isNull();
+            return _call_type == CallType::null;
+        }
+        operator bool()const noexcept
+        {
+            return _call_type != CallType::null;
         }
 
         //触发调用
         Tout Invoke(const Tin&... tin)const noexcept(is_void_v<Tout>)
         {
-            if (IsNull())
+            switch (_call_type)
             {
-                if constexpr (is_void_v<Tout>)
-                    return;
-                else
-                    throw nullexc;
+            case CallType::static_call:
+            {
+                return _fun.static_fun(tin...);
+            }
+                break;
+            case CallType::this_call:
+            {
+                return (_this._ptr->*(_fun.this_fun))(tin...);
+            }
+                break;
+            case CallType::vbptr_this_call:
+            {
+                return (_this._ptr_vbptr->*(_fun._this_fun_vbptr))(tin...);
+            }
+                break;
+            default:
+                break;
             }
 
-
-            if (_this)
-                return (_this->*(_fun.this_fun))(tin...);
+            //如果委托不能调用
+            if constexpr (!is_void_v<Tout>)
+            {
+                throw bad_invoke;
+            }
             else
-                return _fun.static_fun(tin...);
+            {
+                return;
+            }
         }
         Tout operator()(const Tin&... tin)const noexcept(is_void_v<Tout>)
         {
@@ -141,38 +204,61 @@ namespace MyCodes
         }
 
         //解除绑定
-        void UnBind()
+        void UnBind()noexcept
         {
-            _this = nullptr;
-            _fun.value = nullptr;
+            _this.value = nullptr;
+            _fun._this_fun_vbptr = nullptr;
+            _call_type = CallType::null;
         }
 
-        bool operator==(const Delegate_Single& right)const
+        bool operator==(const Delegate_Single& right)const noexcept
         {
-            return ((this->_fun.value == right._fun.value) &&
-                this->_this == right._this);
+            switch (_call_type)
+            {
+            case CallType::static_call:
+                return this->_fun.static_fun == right._fun.static_fun;
+            case CallType::this_call:
+                return this->_this.value == right._this.value &&
+                    this->_fun.this_fun == right._fun.this_fun;
+            case CallType::vbptr_this_call:
+                return this->_this.value == right._this.value &&
+                    this->_fun._this_fun_vbptr == right._fun._this_fun_vbptr;
+            default:
+                break;
+            }
+
+            return true;
         }
-        const Delegate_Single& operator=(const Delegate_Single& right)
+        const Delegate_Single& operator=(const Delegate_Single& right)noexcept
         {
+            this->_call_type = right._call_type;
             this->_this = right._this;
             this->_fun = right._fun;
             return *this;
         }
 
     protected:
-        union _CallFun
+        enum class CallType
+        {
+            null, this_call, static_call, vbptr_this_call
+        };
+        union ThisPtr
         {
             void* value = nullptr;
+            Empty* _ptr;
+            Empty_vbptr* _ptr_vbptr;
+        };
+        union CallFun
+        {
+            void* value;
             Tout(Empty::* this_fun)(const Tin...);
             Tout(*static_fun)(const Tin...);
-            __forceinline bool isNull()const
-            {
-                return this->value == nullptr;
-            }
+            Tout(Empty_vbptr::* _this_fun_vbptr)(const Tin...) = nullptr;
         };
 
-        Empty* _this = nullptr;
-        _CallFun _fun;
+        CallType _call_type=CallType::null;
+        ThisPtr _this;
+        CallFun _fun;
     };
 
     template<class Tout, class... Tin>
@@ -181,48 +267,56 @@ namespace MyCodes
     public:
         //添加委托
         template<class DelPtr>
-        void Add(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...))
+        void Add(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...))noexcept
         {
             Delegate_Single<Tout, Tin...> temp;
             temp.Bind(__this, __fun);
             m_allDels.push_back(temp);
         }
         template<class DelPtr>
-        void Add(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...)const)
+        void Add(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...)const)noexcept
         {
             Delegate_Single<Tout, Tin...> temp;
             temp.Bind(__this, __fun);
             m_allDels.push_back(temp);
         }
         //添加静态委托
-        void Add(Tout(*__fun)(const Tin...))
+        void Add(Tout(*__fun)(const Tin...))noexcept
         {
             Delegate_Single<Tout, Tin...> temp;
             temp.Bind(__fun);
             m_allDels.push_back(temp);
         }
-        void Add(const Delegate_Single<Tout, Tin...>& del)
+        void Add(const Delegate_Single<Tout, Tin...>& del)noexcept
         {
             if(!del.IsNull())
                 this->m_allDels.push_back(del);
         }
-        Delegate_base& operator+=(const Delegate_Single<Tout, Tin...>& del)
+        Delegate_base& operator+=(const Delegate_Single<Tout, Tin...>& del)noexcept
         {
             if (!del.IsNull())
                 this->m_allDels.push_back(del);
             return *this;
         }
 
-        void Clear()
+        void Clear() noexcept
         {
             m_allDels.clear();
         }
-        bool IsNull()const
+        bool Empty()const noexcept
         {
             return m_allDels.size() == 0;
         }
+        operator bool()const noexcept
+        {
+            return !Empty();
+        }
+        const std::vector<Delegate_Single<Tout, Tin...>>& GetArray()const noexcept
+        {
+            return this->m_allDels;
+        }
         _declspec(property(get = getsize)) const size_t size;
-        const size_t getsize()const
+        const size_t getsize()const noexcept
         {
             return m_allDels.size();
         }
@@ -242,15 +336,15 @@ namespace MyCodes
             }
 
             if constexpr(!is_void_v<Tout>)
-                throw nullexc;
+                throw bad_invoke;
         }
         Tout operator()(const Tin&... tin)const noexcept(is_void_v<Tout>)
         {
             return Invoke(tin...);
         }
-        bool TryInvoke(const Tin&... tin)const
+        bool TryInvoke(const Tin&... tin)const noexcept
         {
-            if (IsNull())
+            if (Empty())
             {
                 return false;
             }
@@ -263,56 +357,56 @@ namespace MyCodes
 
         //删除委托
         template<class DelPtr>
-        bool Sub(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...))
+        bool Sub(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...))noexcept
         {
             Delegate_Single<Tout, Tin...> temp;
             temp.Bind(__this, __fun);
             return subDelegate(temp, m_allDels);
         }
         template<class DelPtr>
-        bool Sub(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...)const)
+        bool Sub(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...)const)noexcept
         {
             Delegate_Single<Tout, Tin...> temp;
             temp.Bind(__this, __fun);
             return subDelegate(temp, m_allDels);
         }
         //删除静态委托
-        bool Sub(Tout(*__fun)(const Tin...))
+        bool Sub(Tout(*__fun)(const Tin...))noexcept
         {
             Delegate_Single<Tout, Tin...> temp;
             temp.Bind(__fun);
             return subDelegate(temp, m_allDels);
         }
-        bool Sub(const Delegate_Single<Tout, Tin...>& del)
+        bool Sub(const Delegate_Single<Tout, Tin...>& del)noexcept
         {
             return subDelegate(del, m_allDels);
         }
-        bool operator-=(const Delegate_Single<Tout, Tin...>& del)
+        bool operator-=(const Delegate_Single<Tout, Tin...>& del)noexcept
         {
             return subDelegate(del, m_allDels);
         }
 
         template<class DelPtr>
-        bool Have(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...))const
+        bool Have(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...))const noexcept
         {
             Delegate_Single<Tout, Tin...> temp;
             temp.Bind(__this, __fun);
             return haveDelegate(temp, m_allDels);
         }
         template<class DelPtr>
-        bool Have(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...)const)const
+        bool Have(const DelPtr& __this, Tout(DelPtr::* __fun)(const Tin...)const)const noexcept
         {
             Delegate_Single<Tout, Tin...> temp;
             temp.Bind(__this, __fun);
             return haveDelegate(temp, m_allDels);
         }
-        bool Have(Tout(*__fun)(const Tin...))const
+        bool Have(Tout(*__fun)(const Tin...))const noexcept
         {
             Delegate_Single<Tout, Tin...> temp;
             temp.Bind(__fun);
             return haveDelegate(temp, m_allDels);
         }
-        bool Have(const Delegate_Single<Tout, Tin...>& del)const
+        bool Have(const Delegate_Single<Tout, Tin...>& del)const noexcept
         {
             return haveDelegate(del, m_allDels);
         }
@@ -328,9 +422,9 @@ namespace MyCodes
     class Delegate :public Delegate_base<Tout, Tin...>
     {
     public:
-        bool TryInvoke(_Out_ Tout& out,_In_ const Tin&... tin)const
+        bool TryInvoke(_Out_ Tout& out,_In_ const Tin&... tin)const noexcept
         {
-            if (this->IsNull())
+            if (this->Empty())
             {
                 return false;
             }
@@ -340,20 +434,19 @@ namespace MyCodes
                 return true;
             }
         }
-        bool TryInvoke(const Tin&... tin)const
+        bool TryInvoke(const Tin&... tin)const noexcept
         {
             return Delegate_base<Tout, Tin...>::TryInvoke(tin...);
         }
     };
 
-    //返回值为常量引用类型时的偏特化
     template<class Tout,class...Tin>
     class Delegate<const Tout&, Tin...> :public Delegate_base<const Tout&, Tin...>
     {
     public:
-        bool TryInvoke(_Out_ Tout& out, _In_ const Tin&... tin)const
+        bool TryInvoke(_Out_ Tout& out, _In_ const Tin&... tin)const noexcept
         {
-            if (this->IsNull())
+            if (this->Empty())
             {
                 return false;
             }
@@ -363,7 +456,7 @@ namespace MyCodes
                 return true;
             }
         }
-        bool TryInvoke(const Tin&... tin)const
+        bool TryInvoke(const Tin&... tin)const noexcept
         {
             return Delegate_base<Tout, Tin...>::TryInvoke(tin...);
         }
@@ -373,9 +466,9 @@ namespace MyCodes
     class Delegate<const Tout, Tin...> :public Delegate_base<const Tout, Tin...>
     {
     public:
-        bool TryInvoke(_Out_ Tout& out, _In_ const Tin&... tin)const
+        bool TryInvoke(_Out_ Tout& out, _In_ const Tin&... tin)const noexcept
         {
-            if (this->IsNull())
+            if (this->Empty())
             {
                 return false;
             }
@@ -385,7 +478,7 @@ namespace MyCodes
                 return true;
             }
         }
-        bool TryInvoke(const Tin&... tin)const
+        bool TryInvoke(const Tin&... tin)const noexcept
         {
             return Delegate_base<Tout, Tin...>::TryInvoke(tin...);
         }
@@ -396,6 +489,62 @@ namespace MyCodes
     {
 
     };
+}
+
+namespace MyCodes
+{
+    template<class Tout,class...Tin>
+    class Delegate_view //委托视图
+    {
+    public:
+        Delegate_view(Delegate<Tout, Tin...>& del)
+        {
+            m_del = &del;
+        }
+
+        void Add(const Delegate_Single<Tout, Tin...>& del)noexcept
+        {
+            m_del->Add(del);
+        }
+        Delegate_view& operator+=(const Delegate_Single<Tout, Tin...>& del)noexcept
+        {
+            m_del->operator+=(del);
+            return *this;
+        }
+
+        void Sub(const Delegate_Single<Tout, Tin...>& del)noexcept
+        {
+            m_del->Sub(del);
+        }
+        Delegate_view& operator-=(const Delegate_Single<Tout, Tin...>& del)noexcept
+        {
+            m_del->operator-=(del);
+            return *this;
+        }
+
+        bool Have(const Delegate_Single<Tout, Tin...>& del)const noexcept
+        {
+            return m_del->Have(del);
+        }
+
+        size_t size()const noexcept
+        {
+            return m_del->size;
+        }
+        bool Empty()const noexcept
+        {
+            return m_del->Empty();
+        }
+    protected:
+        void operator=(const Delegate_view&) = delete;
+
+        Delegate<Tout, Tin...>* m_del;
+    };
+
+    template<class Tout, class...Tin>
+    using Event = Delegate<Tout,Tin...>;
+    template<class Tout, class...Tin>
+    using Event_view = Delegate_view<Tout, Tin...>;
 }
 
 #pragma warning(default:6011)
