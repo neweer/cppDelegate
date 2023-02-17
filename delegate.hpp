@@ -45,6 +45,7 @@
                 };
 */
 #pragma once
+#ifdef _MSVC_LANG
 #include<vector>
 #include<exception>
 #pragma warning(disable:6011)	
@@ -96,6 +97,32 @@ namespace MyCodes
 
     };
 
+    class Empty1
+    {
+
+    };
+
+    //多继承的空类型
+    class Empty_multiple :Empty, Empty1
+    {
+
+    };
+
+    template<class T>
+    concept is_virtual_override = requires(void(T:: * fp)())
+    {
+        reinterpret_cast<void(Empty_vbptr::*)()>(fp);
+    };
+
+    template<class T>
+    concept is_multiple_override = requires(void(T:: * fp)())
+    {
+        reinterpret_cast<void(Empty_multiple::*)()>(fp);
+    };
+}
+
+namespace MyCodes
+{
     template<class Tout, class... Tin>
     class Delegate_Single	//单委托
     {
@@ -121,7 +148,7 @@ namespace MyCodes
 
         //绑定类对象和类成员函数
         template<class CLS>
-            requires (sizeof(Tout(CLS::*)(Tin...)) == sizeof(Tout(Empty::*)(Tin...))) //要求不是带有vbptr的类型
+            requires (sizeof(void(CLS::*)()) == sizeof(void(Empty::*)()))
         __forceinline void Bind(const CLS& __this, Tout(CLS::* __fun)(Tin...))noexcept
         {
             _call_type = CallType::this_call;
@@ -129,7 +156,7 @@ namespace MyCodes
             _fun.this_fun = reinterpret_cast<decltype(_fun.this_fun)> (__fun);
         }
         template<class CLS>
-            requires (sizeof(Tout(CLS::*)(Tin...)const) == sizeof(Tout(Empty::*)(Tin...)))
+            requires (sizeof(void(CLS::*)()) == sizeof(void(Empty::*)()))
         __forceinline void Bind(const CLS& __this, Tout(CLS::* __fun)(Tin...)const)noexcept
         {
             _call_type = CallType::this_call;
@@ -137,7 +164,8 @@ namespace MyCodes
             _fun.this_fun = reinterpret_cast<decltype(_fun.this_fun)> (__fun);
         }
         template<class CLS>
-            requires (sizeof(Tout(CLS::*)(Tin...)) == sizeof(Tout(Empty_vbptr::*)(Tin...)))
+            requires (sizeof(void(CLS::*)()) == sizeof(void(Empty_vbptr::*)()))
+        &&is_virtual_override<CLS>
         __forceinline void Bind(const CLS& __this, Tout(CLS::* __fun)(Tin...))noexcept
         {
             _call_type = CallType::vbptr_this_call;
@@ -145,12 +173,31 @@ namespace MyCodes
             _fun._this_fun_vbptr = reinterpret_cast<decltype(_fun._this_fun_vbptr)> (__fun);
         }
         template<class CLS>
-            requires (sizeof(Tout(CLS::*)(Tin...)const) == sizeof(Tout(Empty_vbptr::*)(Tin...)))
+            requires (sizeof(void(CLS::*)()) == sizeof(void(Empty_vbptr::*)()))
+        && is_virtual_override<CLS>
         __forceinline void Bind(const CLS& __this, Tout(CLS::* __fun)(Tin...)const)noexcept
         {
             _call_type = CallType::vbptr_this_call;
             _this._ptr_vbptr = reinterpret_cast<decltype(_this._ptr_vbptr)>(const_cast<CLS*>(&__this));
             _fun._this_fun_vbptr = reinterpret_cast<decltype(_fun._this_fun_vbptr)> (__fun);
+        }
+        template<class CLS>
+            requires (sizeof(void(CLS::*)()) == sizeof(void(Empty_multiple::*)()))
+        &&is_multiple_override<CLS>
+        __forceinline void Bind(const CLS& __this, Tout(CLS::* __fun)(Tin...))noexcept
+        {
+            _call_type = CallType::multiple_this_call;
+            _this._ptr_multiple = reinterpret_cast<decltype(_this._ptr_multiple)>(const_cast<CLS*>(&__this));
+            _fun._this_fun_multiple = reinterpret_cast<decltype(_fun._this_fun_multiple)> (__fun);
+        }
+        template<class CLS>
+            requires (sizeof(void(CLS::*)()) == sizeof(void(Empty_multiple::*)()))
+        &&is_multiple_override<CLS>
+        __forceinline void Bind(const CLS& __this, Tout(CLS::* __fun)(Tin...)const)noexcept
+        {
+            _call_type = CallType::multiple_this_call;
+            _this._ptr_multiple = reinterpret_cast<decltype(_this._ptr_multiple)>(const_cast<CLS*>(&__this));
+            _fun._this_fun_multiple = reinterpret_cast<decltype(_fun._this_fun_multiple)> (__fun);
         }
         //绑定静态函数
         void Bind(Tout(*__fun)(Tin...))noexcept
@@ -189,6 +236,11 @@ namespace MyCodes
                 return (_this._ptr_vbptr->*(_fun._this_fun_vbptr))(tin...);
             }
             break;
+            case CallType::multiple_this_call:
+            {
+                return (_this._ptr_multiple->*(_fun._this_fun_multiple))(tin...);
+            }
+                break;
             default:
                 break;
             }
@@ -238,6 +290,9 @@ namespace MyCodes
             case CallType::vbptr_this_call:
                 return this->_this.value == right._this.value &&
                     this->_fun._this_fun_vbptr == right._fun._this_fun_vbptr;
+            case CallType::multiple_this_call:
+                return this->_this.value == right._this.value &&
+                    this->_fun._this_fun_multiple == right._fun._this_fun_multiple;
             default:
                 break;
             }
@@ -255,13 +310,14 @@ namespace MyCodes
     protected:
         enum class CallType
         {
-            null, this_call, static_call, vbptr_this_call
+            null, this_call, static_call, vbptr_this_call,multiple_this_call
         };
         union ThisPtr
         {
             void* value = nullptr;
             Empty* _ptr;
             Empty_vbptr* _ptr_vbptr;
+            Empty_multiple* _ptr_multiple;
         };
         union CallFun
         {
@@ -269,6 +325,7 @@ namespace MyCodes
             Tout(Empty::* this_fun)(Tin...);
             Tout(*static_fun)(Tin...);
             Tout(Empty_vbptr::* _this_fun_vbptr)(Tin...) = nullptr;
+            Tout(Empty_multiple::* _this_fun_multiple)(Tin...);
         };
 
         CallType _call_type = CallType::null;
@@ -278,9 +335,11 @@ namespace MyCodes
 
     template<template<class DTout,class...DTin>class _Delegate_Single,
         class Tout, class... Tin>
-    class Delegate_base //委托基类
+    class Delegate_base //多播委托基类
     {
     public:
+        using Delegate_Single_Type = _Delegate_Single<Tout,Tin...>;
+
         //添加委托
         template<class CLS>
         __forceinline void Add(const CLS& __this, Tout(CLS::* __fun)(Tin...))noexcept
@@ -504,6 +563,12 @@ namespace MyCodes
 
 namespace MyCodes
 {
+    //  返回值为 void 时，特化的单委托类型。作为返回值为 void 类型的多播委托中的存储元素
+    //  这种特化版本的单委托可以存储任意返回值的方法，但返回值会被舍弃。
+    //  原理是该委托中存储了两个一般的单委托，分为顶层委托和底层委托两部分，底层委托以二进制方
+    //式存储实际指向的对象和方法，顶层委托则指向底层委托的 TryInvoke 方法。调用这种特化的委托
+    //时，由顶层委托调用底层委托，底层委托调用完毕后，返回值会被抛弃，然后顶层委托调用结束，返
+    //回 void。
     template<class,class...Tin>
     class Delegate_Single_void
     {
@@ -622,33 +687,34 @@ namespace MyCodes
     template<class Tout, class...Tin>
     class Delegate_view //委托视图
     {
+        using Delegate_Single = typename Delegate<Tout, Tin...>::Delegate_Single_Type;
     public:
         Delegate_view(Delegate<Tout, Tin...>& del)
         {
             m_del = &del;
         }
 
-        void Add(const Delegate_Single<Tout, Tin...>& del)noexcept
+        void Add(const Delegate_Single& del)noexcept
         {
             m_del->Add(del);
         }
-        Delegate_view& operator+=(const Delegate_Single<Tout, Tin...>& del)noexcept
+        Delegate_view& operator+=(const Delegate_Single& del)noexcept
         {
             m_del->operator+=(del);
             return *this;
         }
 
-        void Sub(const Delegate_Single<Tout, Tin...>& del)noexcept
+        void Sub(const Delegate_Single& del)noexcept
         {
             m_del->Sub(del);
         }
-        Delegate_view& operator-=(const Delegate_Single<Tout, Tin...>& del)noexcept
+        Delegate_view& operator-=(const Delegate_Single& del)noexcept
         {
             m_del->operator-=(del);
             return *this;
         }
 
-        bool Have(const Delegate_Single<Tout, Tin...>& del)const noexcept
+        bool Have(const Delegate_Single& del)const noexcept
         {
             return m_del->Have(del);
         }
@@ -675,3 +741,4 @@ namespace MyCodes
 
 #pragma warning(default:6011)
 #pragma warning(default:6101)
+#endif
