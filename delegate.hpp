@@ -45,24 +45,15 @@ namespace MyCodes
     template<class DelType>
     inline bool subDelegate(const DelType& del, std::vector<DelType>& allDels)noexcept
     {//使用反向迭代器,把最后面的一个满足条件的委托移除
-        auto findit = allDels.rend();
         for (auto it = allDels.rbegin(); it != allDels.rend(); it++)
         {
             if (*it == del)
             {
-                findit = it;
-                break;
+                allDels.erase(--(it.base()));
+                return true;
             }
         }
-        if (findit != allDels.rend())
-        {
-            allDels.erase(--(findit.base()));
-            return true;
-        }
-        else
-        {
-            return false;
-        }
+        return false;
     }
 
     template<class DelType>
