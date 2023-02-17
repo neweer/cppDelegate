@@ -45,7 +45,7 @@
                 };
 */
 #pragma once
-#ifdef _MSVC_LANG
+#if _MSVC_LANG > 201703L
 #include<vector>
 #include<exception>
 #pragma warning(disable:6011)	
