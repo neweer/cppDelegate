@@ -14,7 +14,7 @@
            的重载版本，在第一个参数前面额外传入要接受返回值的变量。
         2、若不需要多播委托，则可以直接使用 Delegate_Single 类，该类型只支持
            存储一个委托。
-        3、Empty 类和 Empty_vbptr 类仅作为强制类型转换时的中间类型，无实际意义。
+        3、空类型仅作为强制类型转换时的中间类型，无实际意义。
         4、若意外调用了空委托，则会抛出 MyCodes::bad_invoke 类型的异常。
         5、如果要绑定的函数有重载版本，那么用类似 del += {v, &decltype(v)::push_back};
            的语法时，编译器无法推导出是哪个重载，此时应该用 Add 方法，即
@@ -53,7 +53,6 @@
     #define delegate Delegate
     #pragma message("delegate 已被定义为 Delegate")
 #endif // !delegate
-#pragma message("delegate 已被定义为 Delegate")
 #if _MSVC_LANG > 201703L
     #define mycodes_delegate_cpp20 1
 #else
